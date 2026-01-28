@@ -1,0 +1,46 @@
+services:
+    nginx:
+        image: nginx:latest
+        userns_mode: host
+        network_mode: host
+        restart: always
+        privileged: true
+        ports:
+            - "80:80"
+            - "443:443"
+        environment:
+            - TS_IP=${TS_IP}
+            - TS_FQDN=${TS_FQDN}
+        volumes:
+            - ~/homelab/config/nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+            - ~/homelab/config/certs:/etc/certs
+        command: >
+            /bin/sh -c "
+              envsubst '$$TS_IP $$TS_FQDN' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf
+              && nginx -g 'daemon off;'
+            "
+
+    glances:
+        image: nicolargo/glances:latest
+        container_name: glances
+        restart: unless-stopped
+        ports:
+            - "61208:61208"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - /etc/os-release:/etc/os-release:ro
+        environment:
+            - GLANCES_OPT=-w
+        pid: host
+        privileged: true
+
+    dozzle:
+        image: amir20/dozzle:latest
+        container_name: dozzle
+        restart: always
+        ports:
+            - "4500:8080"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        environment:
+            - DOZZLE_BASE=/monitoring
